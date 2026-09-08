@@ -1152,24 +1152,52 @@ function drawNode(node, display) {
   const isSelected = state.selected?.type === "node" && state.selected.item.id === node.id;
   const isHovered = state.hovered?.type === "node" && state.hovered.item.id === node.id;
   const matchesSearch = state.searchTerm && nodeMatches(node, state.searchTerm);
-  const passThroughOnly = isPassThroughOnlyNode(node);
+  const visual = nodeVisualState(node);
 
   if (display === "box") {
-    drawNodeBox(node, screen, isSelected || matchesSearch, isHovered, passThroughOnly);
+    drawNodeBox(node, screen, isSelected || matchesSearch, isHovered, visual);
     return;
   }
 
-  const radius = isSelected || matchesSearch ? 7 : isHovered ? 6 : 4.8;
+  const radius = isSelected || matchesSearch ? 7 : isHovered ? 6 : visual.isTemporary ? 4.2 : 4.8;
+  if (visual.isJunction && !isSelected && !matchesSearch) {
+    ctx.beginPath();
+    ctx.arc(screen.x, screen.y, radius + 3.5, 0, Math.PI * 2);
+    ctx.strokeStyle = getThemeColor("--focus");
+    ctx.globalAlpha = isHovered ? 0.55 : 0.26;
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
   ctx.beginPath();
   ctx.arc(screen.x, screen.y, radius, 0, Math.PI * 2);
-  ctx.fillStyle = isSelected || matchesSearch ? getThemeColor("--focus") : passThroughOnly ? getThemeColor("--background") : getThemeColor("--text");
-  ctx.strokeStyle = getThemeColor("--text");
+  ctx.fillStyle =
+    isSelected || matchesSearch
+      ? getThemeColor("--focus")
+      : visual.passThroughOnly || visual.isTemporary
+        ? getThemeColor("--background")
+        : getThemeColor("--text");
+  ctx.strokeStyle = visual.isTemporary && !isHovered ? getThemeColor("--muted") : getThemeColor("--text");
   ctx.lineWidth = isSelected || matchesSearch ? 2.2 : 1.1;
+  if (visual.isTemporary && !isSelected && !matchesSearch) ctx.setLineDash([3, 3]);
   ctx.fill();
   ctx.stroke();
+  ctx.setLineDash([]);
 }
 
-function drawNodeBox(node, screen, emphasized, hovered, passThroughOnly) {
+function nodeVisualState(node) {
+  const morphology = currentMorphology().roles.get(node.id);
+  const role = morphology?.role || "unknown";
+  return {
+    role,
+    isJunction: role === "current-junction",
+    isTemporary: role === "lod-terminal",
+    passThroughOnly: role === "pass-through" || isPassThroughOnlyNode(node),
+  };
+}
+
+function drawNodeBox(node, screen, emphasized, hovered, visual) {
   const label = shortStationName(node);
   ctx.font = `${emphasized ? 700 : 600} 11px system-ui, sans-serif`;
   const metrics = ctx.measureText(label);
@@ -1177,19 +1205,34 @@ function drawNodeBox(node, screen, emphasized, hovered, passThroughOnly) {
   const height = 24;
   const x = screen.x - width / 2;
   const y = screen.y - height / 2;
-  const borderColor = emphasized || hovered ? getThemeColor("--focus") : passThroughOnly ? getThemeColor("--muted") : getThemeColor("--text");
+  const borderColor =
+    emphasized || hovered
+      ? getThemeColor("--focus")
+      : visual.isTemporary || visual.passThroughOnly
+        ? getThemeColor("--muted")
+        : getThemeColor("--text");
+
+  if (visual.isJunction && !emphasized) {
+    ctx.strokeStyle = getThemeColor("--focus");
+    ctx.globalAlpha = hovered ? 0.5 : 0.22;
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.roundRect(x - 3, y - 3, width + 6, height + 6, 7);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
 
   ctx.fillStyle = getThemeColor("--panel");
   ctx.strokeStyle = borderColor;
   ctx.lineWidth = emphasized ? 2 : 1.2;
-  if (passThroughOnly && !emphasized && !hovered) ctx.setLineDash([5, 3]);
+  if ((visual.passThroughOnly || visual.isTemporary) && !emphasized && !hovered) ctx.setLineDash([5, 3]);
   ctx.beginPath();
   ctx.roundRect(x, y, width, height, 5);
   ctx.fill();
   ctx.stroke();
   ctx.setLineDash([]);
 
-  ctx.fillStyle = passThroughOnly && !emphasized && !hovered ? getThemeColor("--muted") : getThemeColor("--text");
+  ctx.fillStyle = (visual.passThroughOnly || visual.isTemporary) && !emphasized && !hovered ? getThemeColor("--muted") : getThemeColor("--text");
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(label, screen.x, screen.y + 0.5);

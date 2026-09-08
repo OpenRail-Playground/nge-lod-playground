@@ -45,6 +45,7 @@ The viewer derives a current morphology model for the active LOD. Hidden interme
 - `reine Durchfahrt`: through node where no active trainrun stops
 
 These roles are shown in node tooltips and the selection panel. Martin Level 1 uses this current reduced morphology for its junction decision.
+The canvas also uses the roles visually: current junctions get a subtle focus halo, temporary LOD terminals are muted and dashed, and pure pass-through nodes remain hollow or dashed.
 
 The first implemented mode is `Ansatz Martin`.
 
