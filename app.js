@@ -1,3 +1,5 @@
+const DATA_URL = "data/networkGraphic_simple_swiss_net.json";
+
 const state = {
   data: null,
   nodes: [],
@@ -1730,6 +1732,13 @@ fileInput.addEventListener("change", async () => {
   }
 });
 
+async function loadDefaultGraph() {
+  const response = await fetch(DATA_URL);
+  if (!response.ok) throw new Error(`Could not load ${DATA_URL}`);
+  setGraph(await response.json());
+  fileName.textContent = DATA_URL.split("/").pop();
+}
+
 lodMode.addEventListener("change", () => {
   state.lodMode = lodMode.value;
   state.hovered = null;
@@ -1863,6 +1872,10 @@ canvas.addEventListener(
 new ResizeObserver(resizeCanvas).observe(canvas);
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
 
-renderCategoryControls();
-updateStats();
-updateSelection();
+loadDefaultGraph().catch((error) => {
+  renderCategoryControls();
+  updateStats();
+  updateSelection();
+  selection.className = "selection";
+  selection.textContent = `${error.message}. Upload a Netzgrafik JSON file to start.`;
+});
