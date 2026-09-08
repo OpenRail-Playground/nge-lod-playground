@@ -40,6 +40,7 @@ const canvas = document.getElementById("graph-canvas");
 const ctx = canvas.getContext("2d");
 const tooltip = document.getElementById("tooltip");
 const fileInput = document.getElementById("file-input");
+const fileName = document.getElementById("file-name");
 const searchInput = document.getElementById("search-input");
 const lodMode = document.getElementById("lod-mode");
 const lodLevel = document.getElementById("lod-level");
@@ -55,38 +56,38 @@ const selection = document.getElementById("selection");
 
 const lodDescriptions = {
   martin: {
-    5: "Alle Bahnhöfe werden als Boxen mit Namen dargestellt.",
-    4: "Bahnhöfe, die nur auf einer Linie liegen, werden zu Punkten reduziert; Linien-Start/Ende bleiben Boxen.",
-    3: "Wie Level 4; Linien-Start/Ende auf Kanten werden zu Punkten reduziert.",
-    2: "Nur Abzweigungen und Endpunkte des Graphen bleiben sichtbar.",
+    5: "All stations are shown as named boxes.",
+    4: "Stations that only lie on one line are reduced to points; inline line starts/ends remain boxes.",
+    3: "Like Level 4, but inline line starts/ends are reduced to points.",
+    2: "Only branching nodes and graph endpoints remain visible.",
   },
   adrian: {
-    5: "Alle Bahnhöfe werden als Boxen dargestellt.",
-    4: "System-, Anschluss- und Korridorknoten als Boxen; Restknoten als Punkte.",
-    3: "System-, Anschluss- und Korridorknoten bleiben sichtbar.",
-    2: "Systemknoten und Anschlussknoten bleiben sichtbar.",
-    1: "Nur Systemknoten mit Ankunft vor 00 und Abfahrt nach 00 bleiben sichtbar.",
+    5: "All stations are shown as boxes.",
+    4: "System, connection, and corridor nodes are shown as boxes; remaining nodes are points.",
+    3: "System, connection, and corridor nodes remain visible.",
+    2: "System and connection nodes remain visible.",
+    1: "Only system nodes with arrivals before 00 and departures after 00 remain visible.",
   },
   jan: {
-    5: "Alle Bahnhöfe werden als Boxen dargestellt.",
-    4: "Bahnhöfe mit niedrigem Score werden zu Punkten reduziert.",
-    3: "Bahnhöfe ab mittlerem Score bleiben sichtbar.",
-    2: "Bahnhöfe mit hohem Score bleiben sichtbar.",
-    1: "Nur sehr stark frequentierte Knoten mit höchstem Score bleiben sichtbar.",
+    5: "All stations are shown as boxes.",
+    4: "Stations with a low score are reduced to points.",
+    3: "Stations with at least a medium score remain visible.",
+    2: "Stations with a high score remain visible.",
+    1: "Only very highly frequented nodes with the highest score remain visible.",
   },
   stopWeights: {
-    5: "Alle Bahnhöfe werden als Boxen dargestellt.",
-    4: "Bahnhöfe mit niedrigem Zughalte-Gewicht werden zu Punkten reduziert.",
-    3: "Bahnhöfe ab mittlerem gewichteten Score bleiben sichtbar.",
-    2: "Bahnhöfe mit hohem gewichteten Score bleiben sichtbar.",
-    1: "Nur Knoten mit höchstem gewichteten Zughalte-Score bleiben sichtbar.",
+    5: "All stations are shown as boxes.",
+    4: "Stations with a low stop-weight score are reduced to points.",
+    3: "Stations with at least a medium weighted score remain visible.",
+    2: "Stations with a high weighted score remain visible.",
+    1: "Only nodes with the highest weighted stop score remain visible.",
   },
   claude: {
-    5: "Vollnetz: alle Bahnhöfe werden als Boxen dargestellt.",
-    4: "Hauptnetzknoten plus die meisten Score-Knoten bleiben sichtbar.",
-    3: "Hauptnetzknoten plus mittlere und hohe Score-Knoten bleiben sichtbar.",
-    2: "Hauptnetzknoten plus hohe Score-Knoten bleiben sichtbar.",
-    1: "Nur harte Hauptnetzknoten bleiben sichtbar.",
+    5: "Full network: all stations are shown as boxes.",
+    4: "Main-network nodes plus most score nodes remain visible.",
+    3: "Main-network nodes plus medium- and high-score nodes remain visible.",
+    2: "Main-network nodes plus high-score nodes remain visible.",
+    1: "Only hard main-network nodes remain visible.",
   },
 };
 
@@ -1225,9 +1226,9 @@ function drawEmptyState(width, height) {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.font = "600 18px system-ui, sans-serif";
-  ctx.fillText("Bitte Netzgrafik-JSON hochladen", width / 2, height / 2 - 12);
+  ctx.fillText("Upload a Netzgrafik JSON file", width / 2, height / 2 - 12);
   ctx.font = "14px system-ui, sans-serif";
-  ctx.fillText("Die Graphdaten werden nicht mehr automatisch aus dem Repository geladen.", width / 2, height / 2 + 16);
+  ctx.fillText("Graph data is no longer loaded automatically from the repository.", width / 2, height / 2 + 16);
   ctx.restore();
 }
 
@@ -1517,11 +1518,11 @@ function updateStats() {
   const stopWeightThreshold = state.stopWeightThresholds.get(state.lodLevel);
   const claudeThreshold = state.claudeThresholds.get(state.lodLevel);
   if (state.lodMode === "jan" && state.lodLevel < 5) {
-    lodDescription.textContent = `${baseDescription} Grenzwert: Score >= ${janThreshold}.`;
+    lodDescription.textContent = `${baseDescription} Threshold: score >= ${janThreshold}.`;
   } else if (state.lodMode === "stopWeights" && state.lodLevel < 5) {
-    lodDescription.textContent = `${baseDescription} Grenzwert: Score >= ${stopWeightThreshold}.`;
+    lodDescription.textContent = `${baseDescription} Threshold: score >= ${stopWeightThreshold}.`;
   } else if (state.lodMode === "claude" && state.lodLevel > 1 && state.lodLevel < 5) {
-    lodDescription.textContent = `${baseDescription} Grenzwert: Score >= ${claudeThreshold}.`;
+    lodDescription.textContent = `${baseDescription} Threshold: score >= ${claudeThreshold}.`;
   } else {
     lodDescription.textContent = baseDescription;
   }
@@ -1555,15 +1556,15 @@ function updateSelection() {
         <dt>ID</dt><dd>${node.id}</dd>
         <dt>Platforms</dt><dd>${node.perronkanten ?? "n/a"}</dd>
         <dt>Ports</dt><dd>${node.ports?.length ?? 0}</dd>
-        <dt>Kanten</dt><dd>${topology?.degree ?? 0}</dd>
-        <dt>Nachbarn</dt><dd>${topology?.nonParallelEdgeCount ?? 0}</dd>
-        <dt>Morphologie</dt><dd>${formatMorphology(node)}</dd>
-        <dt>Halte</dt><dd>${formatStopStatus(topology)}</dd>
+        <dt>Sections</dt><dd>${topology?.degree ?? 0}</dd>
+        <dt>Neighbors</dt><dd>${topology?.nonParallelEdgeCount ?? 0}</dd>
+        <dt>Morphology</dt><dd>${formatMorphology(node)}</dd>
+        <dt>Stops</dt><dd>${formatStopStatus(topology)}</dd>
         <dt>Jan Score</dt><dd>${formatJanScore(topology)}</dd>
-        <dt>Zughalte-Score</dt><dd>${formatStopWeightScore(topology)}</dd>
+        <dt>Stop-weight score</dt><dd>${formatStopWeightScore(topology)}</dd>
         <dt>Claude</dt><dd>${formatClaudeScore(topology)}</dd>
         <dt>Adrian</dt><dd>${escapeHtml(adrianRoleLabel(adrianNodeRole(node)))}</dd>
-        <dt>Umstieg</dt><dd>${formatTransfer(shortestTransfer(topology))}</dd>
+        <dt>Transfer</dt><dd>${formatTransfer(shortestTransfer(topology))}</dd>
         <dt>Labels</dt><dd>${(node.labelIds || []).join(", ") || "none"}</dd>
       </dl>
     `;
@@ -1577,7 +1578,7 @@ function updateSelection() {
         <dt>To</dt><dd>${escapeHtml(edge.target.betriebspunktName || edge.targetNodeId)}</dd>
         <dt>Category</dt><dd>${escapeHtml(edge.category?.shortName || "n/a")}</dd>
         <dt>Travel</dt><dd>${edge.travelTime?.time ?? "n/a"} min</dd>
-        <dt>Zuggewicht</dt><dd>${formatTrainrunStopWeight(edge.trainrunStopStats)}</dd>
+        <dt>Train weight</dt><dd>${formatTrainrunStopWeight(edge.trainrunStopStats)}</dd>
       </dl>
     `;
   }
@@ -1602,42 +1603,42 @@ function formatJanScore(topology) {
   if (!topology) return "0";
   const branchScore = topology.junctionCount * 8;
   const endpointScore = topology.isGraphEnd ? 5 : 0;
-  return `${topology.janScore} (${topology.degree} Verbindungen + ${branchScore} Abzweigung + ${endpointScore} Ende)`;
+  return `${topology.janScore} (${topology.degree} sections + ${branchScore} branch + ${endpointScore} endpoint)`;
 }
 
 function formatStopWeightScore(topology) {
   if (!topology) return "0";
   const branchScore = topology.junctionCount * 8;
   const endpointScore = topology.isGraphEnd ? 5 : 0;
-  return `${topology.stopWeightScore} (${formatNumber(topology.weightedConnectionScore)} gewichtete Halte + ${branchScore} Abzweigung + ${endpointScore} Ende)`;
+  return `${topology.stopWeightScore} (${formatNumber(topology.weightedConnectionScore)} weighted stops + ${branchScore} branch + ${endpointScore} endpoint)`;
 }
 
 function formatStopStatus(topology) {
   if (!topology) return "n/a";
-  if (topology.stoppingTrainrunIds.size === 0 && topology.degree > 0) return "reine Durchfahrt";
-  return `${topology.stoppingTrainrunIds.size} haltende Zugfahrten`;
+  if (topology.stoppingTrainrunIds.size === 0 && topology.degree > 0) return "pass-through only";
+  return `${topology.stoppingTrainrunIds.size} stopping trainruns`;
 }
 
 function formatTrainrunStopWeight(stats) {
   if (!stats) return "n/a";
-  return `${formatNumber(stats.weight)} (${stats.stops}/${stats.traversed} Halte/Knoten)`;
+  return `${formatNumber(stats.weight)} (${stats.stops}/${stats.traversed} stops/nodes)`;
 }
 
 function formatMorphology(node) {
   const morphology = currentMorphology().roles.get(node.id);
-  if (!morphology) return "ausgeblendet";
-  return `${morphologyRoleLabel(morphology.role)}, ${morphology.corridorCount} sichtbare Korridore`;
+  if (!morphology) return "hidden";
+  return `${morphologyRoleLabel(morphology.role)}, ${morphology.corridorCount} visible corridors`;
 }
 
 function morphologyRoleLabel(role) {
   return {
-    "current-junction": "aktuelle Abzweigung",
-    "network-terminal": "echtes Netzende",
-    "inline-terminal": "Linienbeginn/-ende auf Kante",
-    "lod-terminal": "temporäres LOD-Ende",
-    "pass-through": "reine Durchfahrt",
-    "through-stop": "Durchgangshalt",
-    unknown: "unbekannt",
+    "current-junction": "current branch",
+    "network-terminal": "true network endpoint",
+    "inline-terminal": "inline trainrun start/end",
+    "lod-terminal": "temporary LOD endpoint",
+    "pass-through": "pass-through only",
+    "through-stop": "through stop",
+    unknown: "unknown",
   }[role] || role;
 }
 
@@ -1648,7 +1649,7 @@ function formatNumber(value) {
 
 function formatClaudeScore(topology) {
   if (!topology?.claude) return "n/a";
-  const role = topology.claude.invariant ? "hart invariant" : topology.claude.softInvariant ? "weich invariant" : "Score";
+  const role = topology.claude.invariant ? "hard invariant" : topology.claude.softInvariant ? "soft invariant" : "Score";
   return `LOD ${topology.claude.lod}, Score ${topology.claude.score}, Mainline ${topology.claude.mainlineScore}, ${role}`;
 }
 
@@ -1691,20 +1692,20 @@ function updateTooltip(event) {
       <strong>${escapeHtml(node.betriebspunktName || node.fullName || node.id)} (${node.id})</strong>
       <dl>
         <dt>Adrian</dt><dd>${escapeHtml(adrianRoleLabel(adrianNodeRole(node)))}</dd>
-        <dt>Ø Ankunft</dt><dd>${formatAverageTiming(topology?.arrivals)}</dd>
-        <dt>Ø Abfahrt</dt><dd>${formatAverageTiming(topology?.departures)}</dd>
-        <dt>Umstieg</dt><dd>${formatTransfer(shortestTransfer(topology))}</dd>
-        <dt>Nachbarn</dt><dd>${topology?.nonParallelEdgeCount ?? 0}</dd>
-        <dt>Morphologie</dt><dd>${formatMorphology(node)}</dd>
-        <dt>Halte</dt><dd>${formatStopStatus(topology)}</dd>
+        <dt>Avg. arrival</dt><dd>${formatAverageTiming(topology?.arrivals)}</dd>
+        <dt>Avg. departure</dt><dd>${formatAverageTiming(topology?.departures)}</dd>
+        <dt>Transfer</dt><dd>${formatTransfer(shortestTransfer(topology))}</dd>
+        <dt>Neighbors</dt><dd>${topology?.nonParallelEdgeCount ?? 0}</dd>
+        <dt>Morphology</dt><dd>${formatMorphology(node)}</dd>
+        <dt>Stops</dt><dd>${formatStopStatus(topology)}</dd>
         <dt>Jan Score</dt><dd>${formatJanScore(topology)}</dd>
-        <dt>Zughalte-Score</dt><dd>${formatStopWeightScore(topology)}</dd>
+        <dt>Stop-weight score</dt><dd>${formatStopWeightScore(topology)}</dd>
         <dt>Claude</dt><dd>${formatClaudeScore(topology)}</dd>
       </dl>
     `;
   } else {
     const edge = state.hovered.item;
-    tooltip.textContent = `${edge.trainrun?.name || "Trainrun"}: ${edge.source.betriebspunktName} to ${edge.target.betriebspunktName} | Zuggewicht ${formatTrainrunStopWeight(edge.trainrunStopStats)}`;
+    tooltip.textContent = `${edge.trainrun?.name || "Trainrun"}: ${edge.source.betriebspunktName} to ${edge.target.betriebspunktName} | train weight ${formatTrainrunStopWeight(edge.trainrunStopStats)}`;
   }
 }
 
@@ -1720,6 +1721,7 @@ function escapeHtml(value) {
 fileInput.addEventListener("change", async () => {
   const file = fileInput.files?.[0];
   if (!file) return;
+  fileName.textContent = file.name;
   try {
     setGraph(JSON.parse(await file.text()));
   } catch (error) {

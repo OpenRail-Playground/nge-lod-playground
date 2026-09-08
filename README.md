@@ -37,18 +37,18 @@ Category filters are applied before level-of-detail analysis. Changing a trainru
 
 The viewer derives a current morphology model for the active LOD. Hidden intermediate nodes are contracted into visible corridors, and each visible node receives a role based on the current reduced graph:
 
-- `aktuelle Abzweigung`: connects at least three visible corridors in the current LOD
-- `echtes Netzende`: terminal in the filtered source graph
-- `Linienbeginn/-ende auf Kante`: a trainrun starts or ends at an inline node
-- `temporäres LOD-Ende`: terminal created by the current reduction
-- `Durchgangshalt`: through node where at least one active trainrun stops
-- `reine Durchfahrt`: through node where no active trainrun stops
+- `current branch`: connects at least three visible corridors in the current LOD
+- `true network endpoint`: terminal in the filtered source graph
+- `inline trainrun start/end`: a trainrun starts or ends at an inline node
+- `temporary LOD endpoint`: terminal created by the current reduction
+- `through stop`: through node where at least one active trainrun stops
+- `pass-through only`: through node where no active trainrun stops
 
 These roles are shown in node tooltips and the selection panel.
 The canvas also uses the roles visually: current junctions get a subtle focus halo, temporary LOD terminals are muted and dashed, and pure pass-through nodes remain hollow or dashed.
 In Martin Level 2, visible corridors are rendered as direct links between the remaining visible nodes. The underlying trainrun sections stay available for filtering and analysis, while the canvas labels the number of hidden intermediate nodes on the merged corridor.
 
-The first implemented mode is `Ansatz Martin`.
+The first implemented mode is `Martin Approach`.
 
 Detailed documentation: [docs/ansatz-martin.md](docs/ansatz-martin.md).
 
@@ -69,7 +69,7 @@ Stations rendered as boxes use a generated short name. Full station names remain
 
 Point nodes where no active trainrun stops are rendered as hollow circles; point nodes with stops are filled. Box nodes without stops keep a muted dashed outline. Pure pass-through nodes remain available for topology, but are visually distinguished from stations with stops.
 
-The second implemented mode is `Ansatz Adrian`.
+The second implemented mode is `Adrian Approach`.
 
 - Level 5: all stations are shown as boxes.
 - Level 4: system, connection, and corridor nodes are shown as boxes; rest nodes are shown as points.
@@ -79,7 +79,7 @@ The second implemented mode is `Ansatz Adrian`.
 
 For Adrian mode, system nodes are detected from trainrun section timings: an arrival must fall into `[60 - Delta, 00]`, and a departure must fall into `[00, Delta]`. The default Delta is 5 minutes. Connection nodes are non-system nodes with explicit node connections or an implicit arrival-to-departure transfer at or below the configured short-transfer threshold, defaulting to 8 minutes. Corridor nodes reuse the topology role from Martin: branching stations or graph endpoints.
 
-The third implemented mode is `Ansatz Jan`.
+The third implemented mode is `Jan Approach`.
 
 Each station gets a score:
 
@@ -93,7 +93,7 @@ Levels use score quantiles of the loaded graph. Level 1 keeps only the strongest
 
 In Jan mode, the same corridor rule applies: visible stations stay connected through hidden intermediate stations, while outside loops and dangling branches without two visible endpoints are removed.
 
-The fourth implemented mode is `Ansatz Zughalte-Gewichte`.
+The fourth implemented mode is `Stop Weights Approach`.
 
 This mode follows the Jan approach, but replaces the raw connection count with weighted trainrun stops. Each trainrun receives a stop weight:
 
@@ -111,7 +111,7 @@ score = sum of weighted trainrun sections that stop at the node
 
 Levels use score quantiles of the loaded graph, matching Jan mode. Level 1 keeps only the strongest weighted stations, while Level 5 shows everything. Level 4 keeps all stations visible but reduces low-score stations to points.
 
-The fifth implemented mode is `Ansatz Claude`.
+The fifth implemented mode is `Claude Approach`.
 
 Claude mode follows a hard-mainline-first, score-second approach:
 

@@ -105,6 +105,44 @@ h2 {
   border-radius: 6px;
 }
 
+.file-picker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 11px;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.file-picker input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.file-button {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--panel), var(--text) 12%);
+  border-radius: 4px;
+}
+
+.file-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .field input:focus-visible,
 .field select:focus-visible,
 button:focus-visible {

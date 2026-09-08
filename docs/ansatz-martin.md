@@ -1,10 +1,10 @@
-# Ansatz Martin
+# Martin Approach
 
-This document describes the current implementation of `Ansatz Martin` in the Network Graphic Viewer.
+This document describes the current implementation of `Martin Approach` in the Network Graphic Viewer.
 
 ## Goal
 
-`Ansatz Martin` is a morphology-oriented level-of-detail approach. It aims to keep the geographic and topological shape of the graph stable while visually reducing or hiding less important nodes.
+`Martin Approach` is a morphology-oriented level-of-detail approach. It aims to keep the geographic and topological shape of the graph stable while visually reducing or hiding less important nodes.
 
 The approach deliberately does not optimize for timetable quality, traffic weight, or transfer importance. Its central question is:
 
@@ -137,14 +137,14 @@ The viewer also derives a current morphology model for the active LOD.
 
 Hidden intermediate nodes are contracted into visible corridors. The visible nodes are then classified in the reduced graph:
 
-- `aktuelle Abzweigung`: connects at least three visible corridors
-- `echtes Netzende`: is an endpoint in the filtered source graph
-- `Linienbeginn/-ende auf Kante`: a trainrun starts or ends at an inline node
-- `temporäres LOD-Ende`: appears as an endpoint only because of the current reduction
-- `Durchgangshalt`: through node where at least one active trainrun stops
-- `reine Durchfahrt`: through node where no active trainrun stops
+- `current branch`: connects at least three visible corridors
+- `true network endpoint`: is an endpoint in the filtered source graph
+- `inline trainrun start/end`: a trainrun starts or ends at an inline node
+- `temporary LOD endpoint`: appears as an endpoint only because of the current reduction
+- `through stop`: through node where at least one active trainrun stops
+- `pass-through only`: through node where no active trainrun stops
 
-These role names are intentionally kept in German because they are shown in the UI. The roles appear in the tooltip and in the selection panel. They are also used visually:
+These roles appear in the tooltip and in the selection panel. They are also used visually:
 
 - current branching nodes receive a subtle focus halo
 - temporary LOD endpoints are muted and dashed

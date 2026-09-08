@@ -14,10 +14,14 @@
           <p class="muted">Coordinate-preserving plot for Netzgrafik JSON files.</p>
         </div>
 
-        <label class="field">
+        <div class="field">
           <span>Graph file</span>
-          <input id="file-input" type="file" accept="application/json,.json" />
-        </label>
+          <label class="file-picker" for="file-input">
+            <span class="file-button">Choose JSON file</span>
+            <span id="file-name" class="file-name">No file selected</span>
+          </label>
+          <input id="file-input" type="file" accept="application/json,.json" hidden />
+        </div>
 
         <section class="stats" aria-label="Graph statistics">
           <div>
@@ -44,11 +48,11 @@
           <label class="field">
             <span>Mode</span>
             <select id="lod-mode">
-              <option value="martin">Ansatz Martin</option>
-              <option value="adrian">Ansatz Adrian</option>
-              <option value="jan">Ansatz Jan</option>
-              <option value="stopWeights">Ansatz Zughalte-Gewichte</option>
-              <option value="claude">Ansatz Claude</option>
+              <option value="martin">Martin Approach</option>
+              <option value="adrian">Adrian Approach</option>
+              <option value="jan">Jan Approach</option>
+              <option value="stopWeights">Stop Weights Approach</option>
+              <option value="claude">Claude Approach</option>
             </select>
           </label>
           <label class="field">
@@ -57,21 +61,21 @@
           </label>
           <div id="adrian-settings" class="adrian-settings" hidden>
             <label class="field">
-              <span>Δ Systemfenster (min)</span>
+              <span>System window Δ (min)</span>
               <input id="adrian-delta" type="number" min="1" max="20" step="1" value="5" />
             </label>
             <label class="field">
-              <span>Kurzer Umstieg bis (min)</span>
+              <span>Short transfer up to (min)</span>
               <input id="adrian-transfer" type="number" min="1" max="30" step="1" value="8" />
             </label>
           </div>
           <div id="lod-description" class="lod-description"></div>
           <div class="legend">
-            <span><i class="legend-box"></i> Namensbox</span>
-            <span><i class="legend-dot"></i> Punkt mit Halt</span>
-            <span><i class="legend-halo"></i> Abzweigung mit blauem Halo</span>
-            <span><i class="legend-temporary"></i> temporäres LOD-Ende</span>
-            <span><i class="legend-through"></i> reine Durchfahrt</span>
+            <span><i class="legend-box"></i> Named box</span>
+            <span><i class="legend-dot"></i> Stop point</span>
+            <span><i class="legend-halo"></i> Branch with blue halo</span>
+            <span><i class="legend-temporary"></i> Temporary LOD endpoint</span>
+            <span><i class="legend-through"></i> Pass-through only</span>
           </div>
         </section>
 
