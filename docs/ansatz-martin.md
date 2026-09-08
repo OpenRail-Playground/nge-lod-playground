@@ -1,212 +1,212 @@
 # Ansatz Martin
 
-Dieses Dokument beschreibt die aktuelle Implementierung von `Ansatz Martin` im Network Graphic Viewer.
+This document describes the current implementation of `Ansatz Martin` in the Network Graphic Viewer.
 
-## Ziel
+## Goal
 
-`Ansatz Martin` ist ein morphologisch orientierter Level-of-Detail-Ansatz. Er soll die geografische und topologische Gestalt des Graphen möglichst stabil halten, während weniger wichtige Knoten visuell reduziert oder ausgeblendet werden.
+`Ansatz Martin` is a morphology-oriented level-of-detail approach. It aims to keep the geographic and topological shape of the graph stable while visually reducing or hiding less important nodes.
 
-Der Ansatz optimiert bewusst nicht nach Fahrplanqualität, Verkehrsgewicht oder Umstiegsbedeutung. Die zentrale Frage lautet:
+The approach deliberately does not optimize for timetable quality, traffic weight, or transfer importance. Its central question is:
 
 ```text
-Welche Knoten werden benötigt, um die sichtbare Netzstruktur zu verstehen?
+Which nodes are needed to understand the visible network structure?
 ```
 
-## Verfügbare Level
+## Available Levels
 
-Martin verwendet nur noch die Level 2 bis 5. Level 1 wurde entfernt, weil die resultierende Darstellung für den aktuellen Graphen zu stark reduziert und dadurch fachlich wenig hilfreich war.
+Martin uses levels 2 to 5 only. Level 1 was removed because the resulting view was too aggressively reduced and was not useful enough for the current graph.
 
 ### Level 5
 
-Alle Bahnhöfe werden als benannte Boxen angezeigt.
+All stations are shown as named boxes.
 
-Regeln:
+Rules:
 
-- jeder Knoten mit mindestens einer aktiven Kante ist sichtbar
-- jeder sichtbare Knoten wird als Box dargestellt
-- alle nach Kategorien gefilterten Zuglaufabschnitte werden gezeichnet
+- every node with at least one active edge is visible
+- every visible node is rendered as a box
+- all trainrun sections that remain after category filtering are drawn
 
 ### Level 4
 
-Gewöhnliche Durchgangsknoten werden zu Punkten reduziert. Knoten, an denen ein Zuglauf auf einer ansonsten linearen Strecke beginnt oder endet, bleiben als Box sichtbar.
+Ordinary through nodes are reduced to points. Nodes where a trainrun starts or ends on an otherwise linear corridor remain visible as boxes.
 
-Regeln:
+Rules:
 
-- echte Graph-Endpunkte sind als Box sichtbar
-- Abzweigungen sind als Box sichtbar
-- Linienbeginn/-ende auf einer Kante sind als Box sichtbar
-- gewöhnliche Durchgangshalte sind als Punkte sichtbar
-- alle nach Kategorien gefilterten Zuglaufabschnitte werden gezeichnet
+- true graph endpoints are visible as boxes
+- branching nodes are visible as boxes
+- inline trainrun termini are visible as boxes
+- ordinary through stops are visible as points
+- all trainrun sections that remain after category filtering are drawn
 
 ### Level 3
 
-Wie Level 4, aber Linienbeginn/-ende auf einer Kante werden nicht mehr als Box hervorgehoben.
+Level 3 is like Level 4, but inline trainrun termini are no longer emphasized as boxes.
 
-Regeln:
+Rules:
 
-- echte Graph-Endpunkte sind als Box sichtbar
-- Abzweigungen sind als Box sichtbar
-- Linienbeginn/-ende auf einer Kante sind als Punkte sichtbar
-- gewöhnliche Durchgangshalte sind als Punkte sichtbar
-- alle nach Kategorien gefilterten Zuglaufabschnitte werden gezeichnet
-
-### Level 2
-
-Nur noch strukturelle Graphknoten bleiben sichtbar.
-
-Regeln:
-
-- echte Graph-Endpunkte sind als Box sichtbar
-- Abzweigungen sind als Box sichtbar
-- Linienbeginn/-ende auf einer Kante werden ausgeblendet
-- gewöhnliche Durchgangshalte werden ausgeblendet
-- alle nach Kategorien gefilterten Zuglaufabschnitte bleiben Teil der Ansicht
-- die Kanten werden für die Darstellung zu direkten visuellen Korridoren zwischen den verbleibenden sichtbaren Knoten zusammengeführt
-
-## Kategorienfilter
-
-Der Filter auf Zugtypen beziehungsweise Kategorien wird vor der Martin-LOD-Logik angewendet.
-
-Wenn eine Kategorie deaktiviert wird:
-
-- werden ihre Zuglaufabschnitte aus dem aktiven Graphen entfernt
-- wird die Topologie aus den verbleibenden Abschnitten neu berechnet
-- werden Rollen wie Endpunkt, Durchgangsknoten und Abzweigung neu bestimmt
-- wird die sichtbare LOD-Ansicht aus der gefilterten Topologie neu aufgebaut
-
-Ein Knoten kann dadurch seine Rolle ändern. Eine Abzweigung kann zum Beispiel zu einem gewöhnlichen Durchgangsknoten werden, wenn die abgewählte Kategorie der einzige Grund für einen dritten Nachbarn war.
-
-## Topologische Rollen
-
-Die primäre Topologieanalyse basiert auf dem gefilterten Quellgraphen.
-
-### Echter Graph-Endpunkt
-
-Ein Knoten ist ein echter Graph-Endpunkt, wenn er im gefilterten Graphen genau einen unterschiedlichen Nachbarknoten hat.
-
-```text
-Anzahl unterschiedlicher Nachbarn = 1
-```
-
-### Abzweigung
-
-Ein Knoten ist eine Abzweigung, wenn er im gefilterten Graphen mindestens drei unterschiedliche Nachbarknoten hat.
-
-```text
-Anzahl unterschiedlicher Nachbarn >= 3
-```
-
-Geometrische Winkel definieren keine Abzweigung. Ein Knoten mit genau zwei Nachbarn bleibt ein Durchgangsknoten, auch wenn die Linie dort um 90 Grad abknickt.
-
-### Durchgangsknoten
-
-Ein Knoten ist ein Durchgangsknoten, wenn er weder echter Graph-Endpunkt noch Abzweigung ist.
-
-```text
-Anzahl unterschiedlicher Nachbarn = 2
-```
-
-### Linienbeginn/-ende auf einer Kante
-
-Ein Knoten ist Linienbeginn/-ende auf einer Kante, wenn mindestens ein aktiver Zuglauf an diesem Knoten beginnt oder endet, der Knoten selbst aber kein struktureller Graph-Endpunkt ist.
-
-Diese Rolle ist vor allem für Level 4 und Level 3 relevant:
-
-- in Level 4 bleiben solche Knoten als Box sichtbar
-- in Level 3 werden sie zu Punkten reduziert
-
-## Halt vs. Durchfahrt
-
-Zusätzlich zur Topologierolle wird ausgewertet, ob aktive Zugläufe an einem Knoten halten oder ihn nur durchfahren.
-
-Bei Punktdarstellung gilt:
-
-- ein gefüllter Punkt bedeutet, dass mindestens ein aktiver Zuglauf an diesem Knoten hält
-- ein leerer Punkt bedeutet, dass der Knoten ein reiner Durchfahrtsknoten ist
-
-Bei Boxdarstellung gilt:
-
-- eine normale Box steht für einen Knoten, an dem mindestens ein aktiver Zuglauf hält
-- eine gedämpfte gestrichelte Box steht für einen reinen Durchfahrtsknoten
-
-Reine Durchfahrtsknoten können weiterhin topologisch wichtig sein. Sie werden deshalb nicht automatisch entfernt, nur weil dort kein Zug hält.
-
-## Aktuelles Morphologiemodell
-
-Der Viewer berechnet zusätzlich ein aktuelles Morphologiemodell für den aktiven LOD.
-
-Dafür werden ausgeblendete Zwischenknoten zu sichtbaren Korridoren kontrahiert. Anschließend werden die sichtbaren Knoten im reduzierten Graphen klassifiziert:
-
-- `aktuelle Abzweigung`: verbindet mindestens drei sichtbare Korridore
-- `echtes Netzende`: ist ein Endpunkt im gefilterten Quellgraphen
-- `Linienbeginn/-ende auf Kante`: ein Zuglauf beginnt oder endet an einem inline liegenden Knoten
-- `temporäres LOD-Ende`: wirkt nur durch die aktuelle Reduktion wie ein Endpunkt
-- `Durchgangshalt`: Durchgangsknoten, an dem mindestens ein aktiver Zuglauf hält
-- `reine Durchfahrt`: Durchgangsknoten, an dem kein aktiver Zuglauf hält
-
-Diese Rollen erscheinen im Tooltip und im Auswahlpanel. Sie werden auch visuell genutzt:
-
-- aktuelle Abzweigungen erhalten einen dezenten Fokus-Halo
-- temporäre LOD-Enden werden gedämpft und gestrichelt dargestellt
-- reine Durchfahrtsknoten werden leer oder gestrichelt dargestellt
-
-## Kanten-Rendering
-
-Datenmodell und Darstellungsmodell sind absichtlich getrennt.
-
-Das Datenmodell behält die originalen Zuglaufabschnitte. Dadurch bleiben Filterung, Scores, Zeitinformationen und Tooltips auf den Originaldaten korrekt.
-
-Das Darstellungsmodell entscheidet, wie Kanten im Canvas gezeichnet werden.
-
-### Level 3 bis 5
-
-Level 3, 4 und 5 zeichnen die originalen Zuglaufabschnitte.
-
-In diesen Leveln sind keine oder nur wenige Knoten ausgeblendet, daher bleibt die originale Abschnittsgeometrie gut lesbar.
+- true graph endpoints are visible as boxes
+- branching nodes are visible as boxes
+- inline trainrun termini are visible as points
+- ordinary through stops are visible as points
+- all trainrun sections that remain after category filtering are drawn
 
 ### Level 2
 
-Level 2 fasst aufeinanderfolgende Zuglaufabschnitte zu visuellen Korridoren zwischen den verbleibenden sichtbaren Knoten zusammen.
+Only structural graph nodes remain visible.
 
-Die Positionen der Knoten werden nicht verändert. Nur die Kantengeometrie wird neu gezeichnet:
+Rules:
+
+- true graph endpoints are visible as boxes
+- branching nodes are visible as boxes
+- inline trainrun termini are hidden
+- ordinary through stops are hidden
+- all trainrun sections that remain after category filtering remain part of the view
+- edges are rendered as direct visual corridors between the remaining visible nodes
+
+## Category Filtering
+
+Train type/category filters are applied before the Martin LOD logic.
+
+When a category is disabled:
+
+- its trainrun sections are removed from the active graph
+- topology is recalculated from the remaining sections
+- roles such as endpoint, through node, and branching node are recalculated
+- the visible LOD view is rebuilt from the filtered topology
+
+This means a node can change role when categories are toggled. For example, a branching node can become an ordinary through node if the disabled category was the only reason it had a third neighbor.
+
+## Topological Roles
+
+The primary topology analysis is based on the filtered source graph.
+
+### True Graph Endpoint
+
+A node is a true graph endpoint when it has exactly one distinct neighboring node in the filtered graph.
 
 ```text
-sichtbarer Knoten A -- ausgeblendeter Knoten -- ausgeblendeter Knoten -- sichtbarer Knoten B
+number of distinct neighbors = 1
 ```
 
-wird zu:
+### Branching Node
+
+A node is a branching node when it has at least three distinct neighboring nodes in the filtered graph.
 
 ```text
-sichtbarer Knoten A -------------------------------------------- sichtbarer Knoten B
+number of distinct neighbors >= 3
 ```
 
-Mehrere Zugläufe auf demselben Korridor bleiben als parallele Linien sichtbar. Der Viewer versetzt sie leicht, damit das Linienbündel lesbar bleibt.
+Geometric angles do not define branches. A node with exactly two neighbors remains a through node even if the line bends by 90 degrees.
 
-Wenn ein zusammengefasster Korridor ausgeblendete Zwischenknoten überspringt, wird auf dem Korridor ein kleines Badge gezeichnet. Die Zahl im Badge ist die Anzahl der ausgeblendeten Zwischenknoten auf diesem zusammengefassten Korridor.
+### Through Node
 
-## Konnektivitätsprinzip
+A node is a through node when it is neither a true graph endpoint nor a branching node.
 
-Martin soll die visuelle Verbundenheit des Netzes erhalten.
+```text
+number of distinct neighbors = 2
+```
 
-Wenn Knoten ausgeblendet werden, werden die verbindenden Zuglaufabschnitte nicht einfach entfernt. Sichtbare Knoten bleiben über den ausgeblendeten Zwischenpfad verbunden. In Level 2 wird dieser Pfad als direkter Korridor gerendert.
+### Inline Trainrun Terminus
 
-Dadurch werden disjunkte Graphfragmente vermieden, die nur durch die LOD-Reduktion entstehen würden.
+A node is an inline trainrun terminus when at least one active trainrun starts or ends at this node, while the node itself is not a structural graph endpoint.
 
-## Implementierung
+This role mainly matters in Level 4 and Level 3:
 
-Die zentrale Implementierung liegt in `app.js`.
+- in Level 4, these nodes remain visible as boxes
+- in Level 3, they are reduced to points
 
-Wichtige Funktionen:
+## Stop vs. Pass-Through Rendering
 
-- `baseNodeDisplay(node)`: entscheidet, ob ein Martin-Knoten als Box, Punkt oder ausgeblendet dargestellt wird
-- `computeVisibleEdgeIdsForNodeIds(visibleNodeIds)`: hält für Martin die aktiven gefilterten Zuglaufabschnitte sichtbar
-- `computeRenderEdges()`: erzeugt für Martin Level 2 zusammengefasste Render-Korridore
-- `computeTrainrunRenderCorridors(...)`: folgt einem Zuglauf durch ausgeblendete Knoten bis zum nächsten sichtbaren Knoten
-- `offsetRenderCorridors(corridors)`: versetzt parallele Korridorlinien und entscheidet, wo das Badge für ausgeblendete Zwischenknoten erscheint
-- `currentMorphology()`: berechnet Rollen aus dem aktuellen reduzierten Graphen
+In addition to the topological role, the viewer evaluates whether active trainruns stop at a node or only pass through it.
 
-## Bekannte Grenzen
+For point rendering:
 
-Die aktuelle Korridor-Zusammenführung folgt jedem Zuglauf einzeln. Dadurch bleiben mehrere Linien sichtbar, aber sehr dicht befahrene Korridore können weiterhin viele parallele Striche erzeugen.
+- a filled point means that at least one active trainrun stops at this node
+- a hollow point means that the node is a pure pass-through node
 
-Das Badge zählt übersprungene Knoten, nicht physische Abstände und nicht die Anzahl einzelner grafischer Lücken. Es ist ein topologischer Zähler.
+For box rendering:
+
+- a normal box represents a node where at least one active trainrun stops
+- a muted dashed box represents a pure pass-through node
+
+Pure pass-through nodes can still be topologically important. They are therefore not removed automatically just because no train stops there.
+
+## Current Morphology Model
+
+The viewer also derives a current morphology model for the active LOD.
+
+Hidden intermediate nodes are contracted into visible corridors. The visible nodes are then classified in the reduced graph:
+
+- `aktuelle Abzweigung`: connects at least three visible corridors
+- `echtes Netzende`: is an endpoint in the filtered source graph
+- `Linienbeginn/-ende auf Kante`: a trainrun starts or ends at an inline node
+- `temporäres LOD-Ende`: appears as an endpoint only because of the current reduction
+- `Durchgangshalt`: through node where at least one active trainrun stops
+- `reine Durchfahrt`: through node where no active trainrun stops
+
+These role names are intentionally kept in German because they are shown in the UI. The roles appear in the tooltip and in the selection panel. They are also used visually:
+
+- current branching nodes receive a subtle focus halo
+- temporary LOD endpoints are muted and dashed
+- pure pass-through nodes are hollow or dashed
+
+## Edge Rendering
+
+The data model and the rendering model are intentionally separate.
+
+The data model keeps the original trainrun sections. This preserves correct filtering, scores, timing information, and tooltip behavior.
+
+The rendering model decides how edges are drawn on the canvas.
+
+### Levels 3 to 5
+
+Levels 3, 4, and 5 draw the original trainrun sections.
+
+In these levels, no nodes or only a small number of nodes are hidden, so the original section geometry remains readable.
+
+### Level 2
+
+Level 2 merges consecutive trainrun sections into visual corridors between the remaining visible nodes.
+
+Node positions are not changed. Only the edge geometry is redrawn:
+
+```text
+visible node A -- hidden node -- hidden node -- visible node B
+```
+
+becomes:
+
+```text
+visible node A -------------------------------------------- visible node B
+```
+
+Multiple trainruns on the same corridor remain visible as parallel lines. The viewer offsets them slightly so that the line bundle remains legible.
+
+If a merged corridor skips hidden intermediate nodes, the canvas draws a small badge on that corridor. The number in the badge is the number of hidden intermediate nodes skipped by this merged corridor.
+
+## Connectivity Principle
+
+Martin is designed to preserve visual connectedness in the network.
+
+When nodes are hidden, the connecting trainrun sections are not simply removed. Visible nodes remain connected through the hidden intermediate path. In Level 2, that path is rendered as a direct corridor.
+
+This avoids disconnected-looking graph fragments that would otherwise be caused only by LOD reduction.
+
+## Implementation
+
+The main implementation lives in `app.js`.
+
+Important functions:
+
+- `baseNodeDisplay(node)`: decides whether a Martin node is rendered as a box, point, or hidden
+- `computeVisibleEdgeIdsForNodeIds(visibleNodeIds)`: keeps the active filtered trainrun sections visible for Martin mode
+- `computeRenderEdges()`: creates merged render corridors for Martin Level 2
+- `computeTrainrunRenderCorridors(...)`: follows a trainrun through hidden nodes until it reaches the next visible node
+- `offsetRenderCorridors(corridors)`: offsets parallel corridor lines and decides where the hidden-node badge is drawn
+- `currentMorphology()`: computes roles from the current reduced graph
+
+## Known Boundaries
+
+The current corridor merge follows each trainrun independently. This keeps multiple lines visible, but very dense corridors can still produce many parallel strokes.
+
+The badge counts skipped nodes. It does not represent physical distance or the number of individual graphical gaps. It is a topological count.
