@@ -58,7 +58,7 @@ In Martin Level 2, visible corridors are rendered as direct links between the re
 
 The first implemented mode is `Martin Approach`.
 
-Detailed documentation: [docs/ansatz-martin.md](docs/ansatz-martin.md).
+Detailed documentation: [docs/ansatz-martin.md](docs/martin-approach.md).
 
 - Level 5: all stations are shown as named boxes.
 - Level 4: stations that only lie on one line are reduced to points, while inline stations where a trainrun starts or ends remain boxes.
