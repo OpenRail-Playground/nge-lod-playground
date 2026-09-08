@@ -44,21 +44,24 @@ The viewer derives a current morphology model for the active LOD. Hidden interme
 - `Durchgangshalt`: through node where at least one active trainrun stops
 - `reine Durchfahrt`: through node where no active trainrun stops
 
-These roles are shown in node tooltips and the selection panel. Martin Level 1 uses this current reduced morphology for its junction decision.
+These roles are shown in node tooltips and the selection panel.
 The canvas also uses the roles visually: current junctions get a subtle focus halo, temporary LOD terminals are muted and dashed, and pure pass-through nodes remain hollow or dashed.
-In Martin Level 1 and 2, visible corridors are rendered as direct links between the remaining visible nodes. The underlying trainrun sections stay available for filtering and analysis, while the canvas labels the number of hidden intermediate nodes on the merged corridor.
+In Martin Level 2, visible corridors are rendered as direct links between the remaining visible nodes. The underlying trainrun sections stay available for filtering and analysis, while the canvas labels the number of hidden intermediate nodes on the merged corridor.
 
 The first implemented mode is `Ansatz Martin`.
+
+Detailed documentation: [docs/ansatz-martin.md](docs/ansatz-martin.md).
 
 - Level 5: all stations are shown as named boxes.
 - Level 4: stations that only lie on one line are reduced to points, while inline stations where a trainrun starts or ends remain boxes.
 - Level 3: like Level 4, but inline stations where a trainrun starts or ends are reduced to points.
 - Level 2: only graph endpoints and branching stations remain visible.
-- Level 1: only branching stations remain visible.
 
-The current branching heuristic counts distinct neighboring stations, not geometric angles. A station with exactly two neighbors is treated as a through node even if the line bends by 90 degrees. For Martin Level 1, branching is recalculated on the reduced current-level corridor graph, so a station that only looked like a branch before lower-detail pruning is removed if it no longer connects at least three visible corridors.
+Martin mode intentionally uses levels 2-5 only. Level 1 was removed because the resulting view was too reduced to be useful for the current graph.
 
-In Martin mode, hidden nodes do not remove their trainrun sections. Levels 2-5 keep all sections from the category-filtered graph. Level 1 keeps sections as well, but trims hidden leaf branches whose graph-end station is no longer visible.
+The current branching heuristic counts distinct neighboring stations, not geometric angles. A station with exactly two neighbors is treated as a through node even if the line bends by 90 degrees.
+
+In Martin mode, hidden nodes do not remove their trainrun sections. Levels 2-5 keep all sections from the category-filtered graph.
 
 Other LOD modes keep edges when they belong to a shortest corridor between visible stations. Hidden intermediate stations can be crossed, but hidden-only detours, leaf branches, and components with fewer than two visible stations are trimmed away.
 

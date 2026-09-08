@@ -61,7 +61,6 @@ const lodDescriptions = {
     4: "Bahnhöfe, die nur auf einer Linie liegen, werden zu Punkten reduziert; Linien-Start/Ende bleiben Boxen.",
     3: "Wie Level 4; Linien-Start/Ende auf Kanten werden zu Punkten reduziert.",
     2: "Nur Abzweigungen und Endpunkte des Graphen bleiben sichtbar.",
-    1: "Nur Abzweigungen, die im reduzierten Graphen noch mindestens drei sichtbare Korridore verbinden.",
   },
   adrian: {
     5: "Alle Bahnhöfe werden als Boxen dargestellt.",
@@ -674,26 +673,7 @@ function isCategoryVisible(edge) {
 }
 
 function computeVisibleNodes() {
-  const baseNodes = state.nodes.filter((node) => baseNodeDisplay(node) !== "hidden");
-  if (state.lodMode !== "martin" || state.lodLevel !== 1) return baseNodes;
-  return refineMartinLevelOneNodes(baseNodes);
-}
-
-function refineMartinLevelOneNodes(baseNodes) {
-  let visibleNodeIds = new Set(baseNodes.map((node) => node.id));
-
-  while (true) {
-    const edgeIds = computeVisibleEdgeIdsForNodeIds(visibleNodeIds);
-    const contractedAdjacency = contractedVisibleAdjacency(edgeIds, visibleNodeIds);
-    const nextVisibleNodeIds = new Set(
-      baseNodes.filter((node) => (contractedAdjacency.get(node.id)?.size || 0) >= 3).map((node) => node.id),
-    );
-
-    if (sameSet(visibleNodeIds, nextVisibleNodeIds)) break;
-    visibleNodeIds = nextVisibleNodeIds;
-  }
-
-  return baseNodes.filter((node) => visibleNodeIds.has(node.id));
+  return state.nodes.filter((node) => baseNodeDisplay(node) !== "hidden");
 }
 
 function contractedVisibleAdjacency(edgeIds, visibleNodeIds) {
@@ -737,14 +717,6 @@ function findContractedVisibleNeighbors(sourceNodeId, startNodeId, adjacency, vi
   }
 }
 
-function sameSet(a, b) {
-  if (a.size !== b.size) return false;
-  for (const value of a) {
-    if (!b.has(value)) return false;
-  }
-  return true;
-}
-
 function computeVisibleEdgeIds() {
   const visibleNodeIds = new Set(visibleNodes().map((node) => node.id));
   return computeVisibleEdgeIdsForNodeIds(visibleNodeIds);
@@ -755,7 +727,6 @@ function computeVisibleEdgeIdsForNodeIds(visibleNodeIds) {
     (edge) => isCategoryVisible(edge) && !state.hiddenNodeIds.has(edge.sourceNodeId) && !state.hiddenNodeIds.has(edge.targetNodeId),
   );
   if (state.lodMode === "martin") {
-    if (state.lodLevel === 1) return keepEdgesAfterHiddenLeafPruning(candidateEdges, visibleNodeIds);
     return new Set(candidateEdges.map((edge) => edge.id));
   }
   if (visibleNodeIds.size < 2) return new Set();
@@ -763,48 +734,6 @@ function computeVisibleEdgeIdsForNodeIds(visibleNodeIds) {
     return new Set(candidateEdges.map((edge) => edge.id));
   }
   return keepShortestVisibleCorridorEdges(candidateEdges, visibleNodeIds);
-}
-
-function keepEdgesAfterHiddenLeafPruning(edges, visibleNodeIds) {
-  const activeEdgeIds = new Set(edges.map((edge) => edge.id));
-  const adjacency = new Map();
-
-  for (const edge of edges) {
-    addPruningAdjacency(adjacency, edge.sourceNodeId, edge.targetNodeId, edge.id);
-    addPruningAdjacency(adjacency, edge.targetNodeId, edge.sourceNodeId, edge.id);
-  }
-
-  const queue = [...adjacency.keys()].filter((nodeId) => !visibleNodeIds.has(nodeId) && pruningNeighborCount(adjacency, activeEdgeIds, nodeId) <= 1);
-  while (queue.length) {
-    const nodeId = queue.pop();
-    if (visibleNodeIds.has(nodeId) || pruningNeighborCount(adjacency, activeEdgeIds, nodeId) > 1) continue;
-
-    for (const [neighborId, edgeIds] of adjacency.get(nodeId) || []) {
-      let removedAny = false;
-      for (const edgeId of edgeIds) {
-        if (activeEdgeIds.delete(edgeId)) removedAny = true;
-      }
-      if (removedAny && !visibleNodeIds.has(neighborId) && pruningNeighborCount(adjacency, activeEdgeIds, neighborId) <= 1) {
-        queue.push(neighborId);
-      }
-    }
-  }
-
-  return activeEdgeIds;
-}
-
-function addPruningAdjacency(adjacency, sourceNodeId, targetNodeId, edgeId) {
-  if (!adjacency.has(sourceNodeId)) adjacency.set(sourceNodeId, new Map());
-  if (!adjacency.get(sourceNodeId).has(targetNodeId)) adjacency.get(sourceNodeId).set(targetNodeId, new Set());
-  adjacency.get(sourceNodeId).get(targetNodeId).add(edgeId);
-}
-
-function pruningNeighborCount(adjacency, activeEdgeIds, nodeId) {
-  let count = 0;
-  for (const edgeIds of adjacency.get(nodeId)?.values() || []) {
-    if ([...edgeIds].some((edgeId) => activeEdgeIds.has(edgeId))) count += 1;
-  }
-  return count;
 }
 
 function keepShortestVisibleCorridorEdges(edges, visibleNodeIds) {
@@ -1115,8 +1044,6 @@ function baseNodeDisplay(node) {
       return topology.isLineStop ? "point" : "box";
     case 2:
       return topology.isJunction || topology.isGraphEnd ? "box" : "hidden";
-    case 1:
-      return topology.isJunction ? "box" : "hidden";
     default:
       return "box";
   }
@@ -1566,6 +1493,7 @@ function renderCategoryControls() {
 }
 
 function updateStats() {
+  syncLodLevelControl();
   document.getElementById("node-count").textContent = state.nodes.length.toLocaleString();
   document.getElementById("edge-count").textContent = visibleEdges().length.toLocaleString();
   document.getElementById("visible-node-count").textContent = visibleNodes().length.toLocaleString();
@@ -1584,6 +1512,16 @@ function updateStats() {
     lodDescription.textContent = baseDescription;
   }
   adrianSettings.hidden = state.lodMode !== "adrian";
+}
+
+function syncLodLevelControl() {
+  const minLevel = state.lodMode === "martin" ? 2 : 1;
+  lodLevel.min = String(minLevel);
+  if (state.lodLevel < minLevel) {
+    state.lodLevel = minLevel;
+    invalidateVisibility();
+  }
+  lodLevel.value = String(state.lodLevel);
 }
 
 function updateSelection() {
@@ -1780,6 +1718,7 @@ fileInput.addEventListener("change", async () => {
 lodMode.addEventListener("change", () => {
   state.lodMode = lodMode.value;
   state.hovered = null;
+  syncLodLevelControl();
   invalidateVisibility();
   clearInvisibleSelection();
   updateStats();
