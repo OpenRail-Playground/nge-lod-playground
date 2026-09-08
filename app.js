@@ -1,5 +1,3 @@
-const DATA_URL = "data/networkGraphic-2.json";
-
 const state = {
   data: null,
   nodes: [],
@@ -1197,10 +1195,14 @@ function toWorld(point) {
 }
 
 function draw() {
-  if (!state.data) return;
   const width = canvas.clientWidth;
   const height = canvas.clientHeight;
   ctx.clearRect(0, 0, width, height);
+
+  if (!state.data) {
+    drawEmptyState(width, height);
+    return;
+  }
 
   ctx.save();
   ctx.lineCap = "round";
@@ -1214,6 +1216,18 @@ function draw() {
     drawNode(node, nodeDisplay(node));
   }
 
+  ctx.restore();
+}
+
+function drawEmptyState(width, height) {
+  ctx.save();
+  ctx.fillStyle = getThemeColor("--muted");
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = "600 18px system-ui, sans-serif";
+  ctx.fillText("Bitte Netzgrafik-JSON hochladen", width / 2, height / 2 - 12);
+  ctx.font = "14px system-ui, sans-serif";
+  ctx.fillText("Die Graphdaten werden nicht mehr automatisch aus dem Repository geladen.", width / 2, height / 2 + 16);
   ctx.restore();
 }
 
@@ -1703,16 +1717,15 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-async function loadDefaultGraph() {
-  const response = await fetch(DATA_URL);
-  if (!response.ok) throw new Error(`Could not load ${DATA_URL}`);
-  setGraph(await response.json());
-}
-
 fileInput.addEventListener("change", async () => {
   const file = fileInput.files?.[0];
   if (!file) return;
-  setGraph(JSON.parse(await file.text()));
+  try {
+    setGraph(JSON.parse(await file.text()));
+  } catch (error) {
+    selection.className = "selection";
+    selection.textContent = `Could not load graph JSON: ${error.message}`;
+  }
 });
 
 lodMode.addEventListener("change", () => {
@@ -1848,7 +1861,6 @@ canvas.addEventListener(
 new ResizeObserver(resizeCanvas).observe(canvas);
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
 
-loadDefaultGraph().catch((error) => {
-  selection.className = "selection";
-  selection.textContent = error.message;
-});
+renderCategoryControls();
+updateStats();
+updateSelection();

@@ -10,7 +10,7 @@ python3 -m http.server 5173
 
 Then open `http://127.0.0.1:5173/`.
 
-The viewer loads `data/networkGraphic-2.json` by default. Use the file input to load another graph.
+The repository intentionally does not include graph data. Use the file input in the viewer to upload a Netzgrafik JSON file before using the visualization.
 
 ## Future Views
 
