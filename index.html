@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Network Graphic Viewer</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <aside class="sidebar">
+        <div>
+          <h1>Network Graphic Viewer</h1>
+          <p class="muted">Coordinate-preserving plot for Netzgrafik JSON files.</p>
+        </div>
+
+        <label class="field">
+          <span>Graph file</span>
+          <input id="file-input" type="file" accept="application/json,.json" />
+        </label>
+
+        <section class="stats" aria-label="Graph statistics">
+          <div>
+            <span id="node-count">0</span>
+            <small>nodes</small>
+          </div>
+          <div>
+            <span id="edge-count">0</span>
+            <small>visible sections</small>
+          </div>
+          <div>
+            <span id="visible-node-count">0</span>
+            <small>visible</small>
+          </div>
+        </section>
+
+        <label class="field">
+          <span>Find station</span>
+          <input id="search-input" type="search" placeholder="Station name or id" />
+        </label>
+
+        <section>
+          <h2>Level of Detail</h2>
+          <label class="field">
+            <span>Mode</span>
+            <select id="lod-mode">
+              <option value="martin">Ansatz Martin</option>
+              <option value="adrian">Ansatz Adrian</option>
+              <option value="jan">Ansatz Jan</option>
+              <option value="stopWeights">Ansatz Zughalte-Gewichte</option>
+              <option value="claude">Ansatz Claude</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Level <output id="lod-level-output">5</output></span>
+            <input id="lod-level" type="range" min="1" max="5" step="1" value="5" />
+          </label>
+          <div id="adrian-settings" class="adrian-settings" hidden>
+            <label class="field">
+              <span>Δ Systemfenster (min)</span>
+              <input id="adrian-delta" type="number" min="1" max="20" step="1" value="5" />
+            </label>
+            <label class="field">
+              <span>Kurzer Umstieg bis (min)</span>
+              <input id="adrian-transfer" type="number" min="1" max="30" step="1" value="8" />
+            </label>
+          </div>
+          <div id="lod-description" class="lod-description"></div>
+          <div class="legend">
+            <span><i class="legend-box"></i> Namensbox</span>
+            <span><i class="legend-dot"></i> Punkt</span>
+          </div>
+        </section>
+
+        <div class="toolbar" aria-label="View controls">
+          <button id="fit-button" type="button" title="Fit graph to screen">Fit</button>
+          <button id="clear-button" type="button" title="Clear selection">Clear</button>
+        </div>
+
+        <section>
+          <h2>Categories</h2>
+          <div id="category-list" class="category-list"></div>
+        </section>
+
+        <section>
+          <h2>Selection</h2>
+          <div id="selection" class="selection muted">Select a node or section.</div>
+        </section>
+      </aside>
+
+      <section class="stage" aria-label="Graph plot">
+        <canvas id="graph-canvas"></canvas>
+        <div id="tooltip" class="tooltip" hidden></div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
