@@ -33,6 +33,14 @@ const viewRules = [
 
 Category filters are applied before level-of-detail analysis. Changing a trainrun category recomputes topology, scores, thresholds, timing roles, and visible corridors from the filtered graph.
 
+Detailed approach documentation:
+
+- [Martin Approach](docs/ansatz-martin.md)
+- [Adrian Approach](docs/adrian-approach.md)
+- [Jan Approach](docs/jan-approach.md)
+- [Stop Weights Approach](docs/stop-weights-approach.md)
+- [Claude Approach](docs/claude-approach.md)
+
 ## Morphology Model
 
 The viewer derives a current morphology model for the active LOD. Hidden intermediate nodes are contracted into visible corridors, and each visible node receives a role based on the current reduced graph:
@@ -71,6 +79,8 @@ Point nodes where no active trainrun stops are rendered as hollow circles; point
 
 The second implemented mode is `Adrian Approach`.
 
+Detailed documentation: [docs/adrian-approach.md](docs/adrian-approach.md).
+
 - Level 5: all stations are shown as boxes.
 - Level 4: system, connection, and corridor nodes are shown as boxes; rest nodes are shown as points.
 - Level 3: system, connection, and corridor nodes remain visible.
@@ -80,6 +90,8 @@ The second implemented mode is `Adrian Approach`.
 For Adrian mode, system nodes are detected from trainrun section timings: an arrival must fall into `[60 - Delta, 00]`, and a departure must fall into `[00, Delta]`. The default Delta is 5 minutes. Connection nodes are non-system nodes with explicit node connections or an implicit arrival-to-departure transfer at or below the configured short-transfer threshold, defaulting to 8 minutes. Corridor nodes reuse the topology role from Martin: branching stations or graph endpoints.
 
 The third implemented mode is `Jan Approach`.
+
+Detailed documentation: [docs/jan-approach.md](docs/jan-approach.md).
 
 Each station gets a score:
 
@@ -94,6 +106,8 @@ Levels use score quantiles of the loaded graph. Level 1 keeps only the strongest
 In Jan mode, the same corridor rule applies: visible stations stay connected through hidden intermediate stations, while outside loops and dangling branches without two visible endpoints are removed.
 
 The fourth implemented mode is `Stop Weights Approach`.
+
+Detailed documentation: [docs/stop-weights-approach.md](docs/stop-weights-approach.md).
 
 This mode follows the Jan approach, but replaces the raw connection count with weighted trainrun stops. Each trainrun receives a stop weight:
 
@@ -112,6 +126,8 @@ score = sum of weighted trainrun sections that stop at the node
 Levels use score quantiles of the loaded graph, matching Jan mode. Level 1 keeps only the strongest weighted stations, while Level 5 shows everything. Level 4 keeps all stations visible but reduces low-score stations to points.
 
 The fifth implemented mode is `Claude Approach`.
+
+Detailed documentation: [docs/claude-approach.md](docs/claude-approach.md).
 
 Claude mode follows a hard-mainline-first, score-second approach:
 
