@@ -15,6 +15,7 @@ const state = {
   visibleNodeCache: null,
   visibleEdgeIdCache: null,
   visibleEdgeCache: null,
+  morphologyCache: null,
   lodMode: "martin",
   lodLevel: 5,
   adrianDelta: 5,
@@ -594,6 +595,7 @@ function setGraph(data) {
     visibleNodeCache: null,
     visibleEdgeIdCache: null,
     visibleEdgeCache: null,
+    morphologyCache: null,
   });
 
   state.categoryVisibility = new Map();
@@ -639,6 +641,7 @@ function invalidateVisibility() {
   state.visibleNodeCache = null;
   state.visibleEdgeIdCache = null;
   state.visibleEdgeCache = null;
+  state.morphologyCache = null;
 }
 
 function recomputeFilteredAnalysis() {
@@ -881,6 +884,47 @@ function collectPathPairs(sourceNodeId, targetNodeId, predecessors, keptNodePair
 
 function nodePairKey(a, b) {
   return String(a) < String(b) ? `${a}|${b}` : `${b}|${a}`;
+}
+
+function currentMorphology() {
+  if (!state.morphologyCache) {
+    state.morphologyCache = computeCurrentMorphology();
+  }
+  return state.morphologyCache;
+}
+
+function computeCurrentMorphology() {
+  const visible = visibleNodes();
+  const visibleNodeIds = new Set(visible.map((node) => node.id));
+  const edgeIds = visibleEdgeIds();
+  const contractedAdjacency = contractedVisibleAdjacency(edgeIds, visibleNodeIds);
+  const roles = new Map();
+
+  for (const node of visible) {
+    const topology = state.topology.get(node.id);
+    const corridorCount = contractedAdjacency.get(node.id)?.size || 0;
+    roles.set(node.id, {
+      role: morphologyRole(node, topology, corridorCount),
+      corridorCount,
+    });
+  }
+
+  return {
+    visibleNodeIds,
+    edgeIds,
+    contractedAdjacency,
+    roles,
+  };
+}
+
+function morphologyRole(node, topology, corridorCount) {
+  if (!topology) return "unknown";
+  if (corridorCount >= 3) return "current-junction";
+  if (topology.isGraphEnd) return "network-terminal";
+  if (topology.isInlineTerminus) return "inline-terminal";
+  if (corridorCount <= 1) return "lod-terminal";
+  if (isPassThroughOnlyNode(node)) return "pass-through";
+  return "through-stop";
 }
 
 function nodeDisplay(node) {
@@ -1329,6 +1373,7 @@ function updateSelection() {
         <dt>Ports</dt><dd>${node.ports?.length ?? 0}</dd>
         <dt>Kanten</dt><dd>${topology?.degree ?? 0}</dd>
         <dt>Nachbarn</dt><dd>${topology?.nonParallelEdgeCount ?? 0}</dd>
+        <dt>Morphologie</dt><dd>${formatMorphology(node)}</dd>
         <dt>Halte</dt><dd>${formatStopStatus(topology)}</dd>
         <dt>Jan Score</dt><dd>${formatJanScore(topology)}</dd>
         <dt>Zughalte-Score</dt><dd>${formatStopWeightScore(topology)}</dd>
@@ -1394,6 +1439,24 @@ function formatTrainrunStopWeight(stats) {
   return `${formatNumber(stats.weight)} (${stats.stops}/${stats.traversed} Halte/Knoten)`;
 }
 
+function formatMorphology(node) {
+  const morphology = currentMorphology().roles.get(node.id);
+  if (!morphology) return "ausgeblendet";
+  return `${morphologyRoleLabel(morphology.role)}, ${morphology.corridorCount} sichtbare Korridore`;
+}
+
+function morphologyRoleLabel(role) {
+  return {
+    "current-junction": "aktuelle Abzweigung",
+    "network-terminal": "echtes Netzende",
+    "inline-terminal": "Linienbeginn/-ende auf Kante",
+    "lod-terminal": "temporäres LOD-Ende",
+    "pass-through": "reine Durchfahrt",
+    "through-stop": "Durchgangshalt",
+    unknown: "unbekannt",
+  }[role] || role;
+}
+
 function formatNumber(value) {
   const rounded = Math.round((value || 0) * 10) / 10;
   return Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1);
@@ -1448,6 +1511,7 @@ function updateTooltip(event) {
         <dt>Ø Abfahrt</dt><dd>${formatAverageTiming(topology?.departures)}</dd>
         <dt>Umstieg</dt><dd>${formatTransfer(shortestTransfer(topology))}</dd>
         <dt>Nachbarn</dt><dd>${topology?.nonParallelEdgeCount ?? 0}</dd>
+        <dt>Morphologie</dt><dd>${formatMorphology(node)}</dd>
         <dt>Halte</dt><dd>${formatStopStatus(topology)}</dd>
         <dt>Jan Score</dt><dd>${formatJanScore(topology)}</dd>
         <dt>Zughalte-Score</dt><dd>${formatStopWeightScore(topology)}</dd>

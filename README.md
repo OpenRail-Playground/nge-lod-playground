@@ -33,6 +33,19 @@ const viewRules = [
 
 Category filters are applied before level-of-detail analysis. Changing a trainrun category recomputes topology, scores, thresholds, timing roles, and visible corridors from the filtered graph.
 
+## Morphology Model
+
+The viewer derives a current morphology model for the active LOD. Hidden intermediate nodes are contracted into visible corridors, and each visible node receives a role based on the current reduced graph:
+
+- `aktuelle Abzweigung`: connects at least three visible corridors in the current LOD
+- `echtes Netzende`: terminal in the filtered source graph
+- `Linienbeginn/-ende auf Kante`: a trainrun starts or ends at an inline node
+- `temporäres LOD-Ende`: terminal created by the current reduction
+- `Durchgangshalt`: through node where at least one active trainrun stops
+- `reine Durchfahrt`: through node where no active trainrun stops
+
+These roles are shown in node tooltips and the selection panel. Martin Level 1 uses this current reduced morphology for its junction decision.
+
 The first implemented mode is `Ansatz Martin`.
 
 - Level 5: all stations are shown as named boxes.
