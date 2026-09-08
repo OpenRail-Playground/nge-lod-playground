@@ -35,7 +35,7 @@ Category filters are applied before level-of-detail analysis. Changing a trainru
 
 Detailed approach documentation:
 
-- [Martin Approach](docs/ansatz-martin.md)
+- [Martin Approach](docs/martin-approach.md)
 - [Adrian Approach](docs/adrian-approach.md)
 - [Jan Approach](docs/jan-approach.md)
 - [Stop Weights Approach](docs/stop-weights-approach.md)
