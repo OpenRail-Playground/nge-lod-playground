@@ -158,17 +158,18 @@ button:focus-visible {
 }
 
 .legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  display: grid;
+  gap: 8px;
   margin-top: 10px;
   color: var(--muted);
 }
 
 .legend span {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  min-width: 0;
 }
 
 .legend-box {
@@ -177,6 +178,7 @@ button:focus-visible {
   border: 1px solid var(--focus);
   border-radius: 3px;
   background: var(--panel);
+  justify-self: center;
 }
 
 .legend-dot {
@@ -184,7 +186,8 @@ button:focus-visible {
   height: 10px;
   border: 2px solid var(--focus);
   border-radius: 50%;
-  background: var(--node);
+  background: var(--text);
+  justify-self: center;
 }
 
 .legend-halo {
@@ -194,6 +197,7 @@ button:focus-visible {
   border-radius: 4px;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus), transparent 72%);
   background: var(--panel);
+  justify-self: center;
 }
 
 .legend-temporary {
@@ -202,6 +206,7 @@ button:focus-visible {
   border: 1px dashed var(--muted);
   border-radius: 4px;
   background: var(--panel);
+  justify-self: center;
 }
 
 .legend-through {
@@ -210,6 +215,7 @@ button:focus-visible {
   border: 2px solid var(--muted);
   border-radius: 50%;
   background: var(--background);
+  justify-self: center;
 }
 
 button {
