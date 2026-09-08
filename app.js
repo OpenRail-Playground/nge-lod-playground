@@ -15,6 +15,7 @@ const state = {
   visibleNodeCache: null,
   visibleEdgeIdCache: null,
   visibleEdgeCache: null,
+  renderEdgeCache: null,
   morphologyCache: null,
   lodMode: "martin",
   lodLevel: 5,
@@ -595,6 +596,7 @@ function setGraph(data) {
     visibleNodeCache: null,
     visibleEdgeIdCache: null,
     visibleEdgeCache: null,
+    renderEdgeCache: null,
     morphologyCache: null,
   });
 
@@ -626,8 +628,20 @@ function visibleEdges() {
   return state.visibleEdgeCache;
 }
 
+function renderEdges() {
+  if (!state.renderEdgeCache) {
+    state.renderEdgeCache = computeRenderEdges();
+  }
+  return state.renderEdgeCache;
+}
+
 function isEdgeVisible(edge) {
   return visibleEdgeIds().has(edge.id);
+}
+
+function isEdgeRendered(edge) {
+  if (isEdgeVisible(edge)) return true;
+  return renderEdges().some((renderEdge) => renderEdge.id === edge.id);
 }
 
 function visibleEdgeIds() {
@@ -641,6 +655,7 @@ function invalidateVisibility() {
   state.visibleNodeCache = null;
   state.visibleEdgeIdCache = null;
   state.visibleEdgeCache = null;
+  state.renderEdgeCache = null;
   state.morphologyCache = null;
 }
 
@@ -810,6 +825,152 @@ function keepShortestVisibleCorridorEdges(edges, visibleNodeIds) {
   }
 
   return new Set(edges.filter((edge) => keptNodePairs.has(nodePairKey(edge.sourceNodeId, edge.targetNodeId))).map((edge) => edge.id));
+}
+
+function computeRenderEdges() {
+  if (state.lodMode !== "martin" || state.lodLevel > 2) return visibleEdges();
+
+  const visibleNodeIds = new Set(visibleNodes().map((node) => node.id));
+  if (visibleNodeIds.size < 2) return [];
+
+  const edges = visibleEdges();
+  const byTrainrun = new Map();
+  for (const edge of edges) {
+    const trainrunId = edge.trainrun?.id ?? edge.trainrunId ?? "unknown";
+    if (!byTrainrun.has(trainrunId)) byTrainrun.set(trainrunId, []);
+    byTrainrun.get(trainrunId).push(edge);
+  }
+
+  const corridors = [];
+  for (const [trainrunId, trainrunEdges] of byTrainrun) {
+    corridors.push(...computeTrainrunRenderCorridors(trainrunId, trainrunEdges, visibleNodeIds));
+  }
+
+  return offsetRenderCorridors(corridors);
+}
+
+function computeTrainrunRenderCorridors(trainrunId, trainrunEdges, visibleNodeIds) {
+  const adjacency = new Map();
+  for (const edge of trainrunEdges) {
+    addTrainrunRenderEdge(adjacency, edge.sourceNodeId, edge);
+    addTrainrunRenderEdge(adjacency, edge.targetNodeId, edge);
+  }
+
+  const corridors = [];
+  const visitedEdgeIds = new Set();
+  for (const sourceNodeId of visibleNodeIds) {
+    for (const edge of adjacency.get(sourceNodeId) || []) {
+      if (visitedEdgeIds.has(edge.id)) continue;
+      const corridor = followRenderCorridor(trainrunId, sourceNodeId, edge, adjacency, visibleNodeIds, visitedEdgeIds);
+      if (corridor) corridors.push(corridor);
+    }
+  }
+  return corridors;
+}
+
+function addTrainrunRenderEdge(adjacency, nodeId, edge) {
+  if (!adjacency.has(nodeId)) adjacency.set(nodeId, []);
+  adjacency.get(nodeId).push(edge);
+}
+
+function followRenderCorridor(trainrunId, sourceNodeId, firstEdge, adjacency, visibleNodeIds, visitedEdgeIds) {
+  const pathEdges = [];
+  const hiddenNodeIds = new Set();
+  let previousNodeId = sourceNodeId;
+  let currentEdge = firstEdge;
+  let currentNodeId = otherEdgeNode(currentEdge, sourceNodeId);
+
+  while (currentNodeId != null) {
+    if (visitedEdgeIds.has(currentEdge.id)) return null;
+    visitedEdgeIds.add(currentEdge.id);
+    pathEdges.push(currentEdge);
+
+    if (visibleNodeIds.has(currentNodeId)) {
+      if (currentNodeId === sourceNodeId) return null;
+      return makeRenderCorridor(trainrunId, sourceNodeId, currentNodeId, pathEdges, hiddenNodeIds);
+    }
+
+    hiddenNodeIds.add(currentNodeId);
+    const nextEdges = (adjacency.get(currentNodeId) || []).filter((edge) => edge.id !== currentEdge.id);
+    if (nextEdges.length !== 1) return null;
+    previousNodeId = currentNodeId;
+    currentEdge = nextEdges[0];
+    currentNodeId = otherEdgeNode(currentEdge, previousNodeId);
+  }
+
+  return null;
+}
+
+function makeRenderCorridor(trainrunId, sourceNodeId, targetNodeId, pathEdges, hiddenNodeIds) {
+  const sourceNode = state.nodes.find((node) => node.id === sourceNodeId);
+  const targetNode = state.nodes.find((node) => node.id === targetNodeId);
+  if (!sourceNode || !targetNode) return null;
+  const firstEdge = pathEdges[0];
+  return {
+    ...firstEdge,
+    id: `corridor:${trainrunId}:${sourceNodeId}:${targetNodeId}:${pathEdges.map((edge) => edge.id).join(",")}`,
+    sourceNodeId,
+    targetNodeId,
+    source: sourceNode,
+    target: targetNode,
+    points: [
+      { x: sourceNode.positionX, y: sourceNode.positionY },
+      { x: targetNode.positionX, y: targetNode.positionY },
+    ],
+    originalEdges: pathEdges,
+    gapCount: hiddenNodeIds.size,
+    renderPairKey: nodePairKey(sourceNodeId, targetNodeId),
+  };
+}
+
+function otherEdgeNode(edge, nodeId) {
+  if (edge.sourceNodeId === nodeId) return edge.targetNodeId;
+  if (edge.targetNodeId === nodeId) return edge.sourceNodeId;
+  return null;
+}
+
+function offsetRenderCorridors(corridors) {
+  const groups = new Map();
+  for (const corridor of corridors) {
+    if (!groups.has(corridor.renderPairKey)) groups.set(corridor.renderPairKey, []);
+    groups.get(corridor.renderPairKey).push(corridor);
+  }
+
+  for (const group of groups.values()) {
+    group.sort((a, b) => String(a.trainrun?.id ?? a.id).localeCompare(String(b.trainrun?.id ?? b.id)));
+    const middle = (group.length - 1) / 2;
+    let labelIndex = -1;
+    let labelGapCount = 0;
+    for (let index = 0; index < group.length; index += 1) {
+      if ((group[index].gapCount || 0) > labelGapCount) {
+        labelGapCount = group[index].gapCount;
+        labelIndex = index;
+      }
+    }
+
+    for (let index = 0; index < group.length; index += 1) {
+      const corridor = group[index];
+      const offset = (index - middle) * 4;
+      corridor.points = offsetLinePoints(corridor.points[0], corridor.points[1], offset);
+      corridor.showGapCount = index === labelIndex && labelGapCount > 0;
+    }
+  }
+
+  return corridors;
+}
+
+function offsetLinePoints(source, target, offset) {
+  if (!offset) return [source, target];
+  const dx = target.x - source.x;
+  const dy = target.y - source.y;
+  const length = Math.hypot(dx, dy);
+  if (!length) return [source, target];
+  const nx = -dy / length;
+  const ny = dx / length;
+  return [
+    { x: source.x + nx * offset, y: source.y + ny * offset },
+    { x: target.x + nx * offset, y: target.y + ny * offset },
+  ];
 }
 
 function weightedEdgeAdjacency(edges) {
@@ -1055,7 +1216,7 @@ function graphBounds() {
   for (const node of visibleNodes()) {
     points.push({ x: node.positionX, y: node.positionY });
   }
-  for (const edge of visibleEdges()) {
+  for (const edge of renderEdges()) {
     points.push(...edge.points);
   }
 
@@ -1118,7 +1279,7 @@ function draw() {
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
-  for (const edge of visibleEdges()) {
+  for (const edge of renderEdges()) {
     drawEdge(edge);
   }
 
@@ -1145,6 +1306,35 @@ function drawEdge(edge) {
   ctx.lineWidth = isSelected ? 5 : isHovered ? 4 : 2.2;
   ctx.stroke();
   ctx.globalAlpha = 1;
+
+  if (edge.showGapCount) drawGapCount(edge);
+}
+
+function drawGapCount(edge) {
+  const [source, target] = edge.points;
+  if (!source || !target) return;
+  const screen = toScreen({
+    x: (source.x + target.x) / 2,
+    y: (source.y + target.y) / 2,
+  });
+  const text = String(edge.gapCount);
+  ctx.save();
+  ctx.font = "600 10px system-ui, sans-serif";
+  const metrics = ctx.measureText(text);
+  const width = Math.max(16, metrics.width + 8);
+  const height = 15;
+  ctx.fillStyle = getThemeColor("--panel");
+  ctx.strokeStyle = getThemeColor("--muted");
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(screen.x - width / 2, screen.y - height / 2, width, height, 4);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = getThemeColor("--muted");
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, screen.x, screen.y + 0.5);
+  ctx.restore();
 }
 
 function drawNode(node, display) {
@@ -1285,8 +1475,7 @@ function nearestItem(screenPoint) {
 
   let bestEdge = null;
   let bestEdgeDistance = Infinity;
-  for (const edge of state.edges) {
-    if (!isEdgeVisible(edge)) continue;
+  for (const edge of renderEdges()) {
     const distance = distanceToPolyline(world, edge.points) * state.scale;
     if (distance < bestEdgeDistance) {
       bestEdgeDistance = distance;
@@ -1352,7 +1541,7 @@ function renderCategoryControls() {
     checkbox.addEventListener("change", () => {
       state.categoryVisibility.set(category.id, checkbox.checked);
       recomputeFilteredAnalysis();
-      if (state.selected?.type === "edge" && !isEdgeVisible(state.selected.item)) {
+      if (state.selected?.type === "edge" && !isEdgeRendered(state.selected.item)) {
         state.selected = null;
       }
       if (state.selected?.type === "node" && nodeDisplay(state.selected.item) === "hidden") {
@@ -1631,7 +1820,7 @@ function clearInvisibleSelection() {
     state.selected = null;
     updateSelection();
   }
-  if (state.selected?.type === "edge" && !isEdgeVisible(state.selected.item)) {
+  if (state.selected?.type === "edge" && !isEdgeRendered(state.selected.item)) {
     state.selected = null;
     updateSelection();
   }

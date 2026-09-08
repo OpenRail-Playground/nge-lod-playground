@@ -46,6 +46,7 @@ The viewer derives a current morphology model for the active LOD. Hidden interme
 
 These roles are shown in node tooltips and the selection panel. Martin Level 1 uses this current reduced morphology for its junction decision.
 The canvas also uses the roles visually: current junctions get a subtle focus halo, temporary LOD terminals are muted and dashed, and pure pass-through nodes remain hollow or dashed.
+In Martin Level 1 and 2, visible corridors are rendered as direct links between the remaining visible nodes. The underlying trainrun sections stay available for filtering and analysis, while the canvas labels the number of hidden intermediate nodes on the merged corridor.
 
 The first implemented mode is `Ansatz Martin`.
 
